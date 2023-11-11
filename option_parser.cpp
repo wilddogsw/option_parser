@@ -4,21 +4,23 @@
 
 #include "option_parser.h"
 #include <filesystem>
-#include <spdlog/fmt/ostr.h>
+#include <boost/dll/runtime_symbol_info.hpp>
 
 namespace fs = std::filesystem;
 
-OptionParser::OptionParser(std::string app_description) : super(std::move(app_description))
+OptionParser::OptionParser(std::string app_description) : CLI::App(std::move(app_description))
 {
     this->add_flag("-v,--verbose", this->verbose, "Write debug messages to the log");
+    this->add_flag("-q,--quiet", this->quiet, "Write only warnings or worse to the log");
 }
 
 void OptionParser::Parse(int argc, const char *const *argv)
 {
-    super::name(fs::path(argv[0]).stem());
+    if (this->get_name().empty())
+        this->name(boost::dll::program_location().stem().string());
     try
     {
-        super::parse(argc, argv);
+        this->parse(argc, argv);
     }
     catch (const CLI::ParseError &e)
     {
@@ -29,28 +31,11 @@ void OptionParser::Parse(int argc, const char *const *argv)
 
 void OptionParser::Parse(std::string commandline, bool program_name_included)
 {
-    if (program_name_included)
-    {
-        size_t pos = commandline.find(' ');
-        if (pos != std::string::npos)
-            super::name(fs::path(commandline.substr(0, pos)).stem());
-    }
+    if (this->get_name().empty() && !program_name_included)
+        this->name(boost::dll::program_location().stem().string());
     try
     {
-        super::parse(std::move(commandline), program_name_included);
-    }
-    catch (const CLI::ParseError &e)
-    {
-        ::exit(this->exit(e));
-    }
-    this->PostParse_();
-}
-
-void OptionParser::Parse(std::vector<std::string> &args)
-{
-    try
-    {
-        super::parse(args);
+        this->parse(std::move(commandline), program_name_included);
     }
     catch (const CLI::ParseError &e)
     {
@@ -75,4 +60,6 @@ void OptionParser::PostParse_()
 {
     if (this->verbose)
         spdlog::set_level(spdlog::level::debug);
+    else if (this->quiet)
+        spdlog::set_level(spdlog::level::warn);
 }

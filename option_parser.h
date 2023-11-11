@@ -9,17 +9,15 @@
 
 class OptionParser : public CLI::App
 {
-    using super = CLI::App;
-
   public:
     bool verbose{false};
+    bool quiet{false};
 
-    explicit OptionParser(std::string app_description = "");
+    explicit OptionParser(std::string app_description);
     ~OptionParser() override = default;
 
     void Parse(int argc, const char *const *argv);
     void Parse(std::string commandline, bool program_name_included = false);
-    void Parse(std::vector<std::string> &args);
 
     template <typename T>
     void AddHeader(const std::string &label, const T &value)
